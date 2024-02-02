@@ -23,3 +23,11 @@ Run a local server** and open index.html in a browser.
 Add an animated GIF to the README to preview what it looks like.
 
 See TODO flags in index.html.
+
+## Credits and license
+
+Created by Lars Maxfield.
+
+Licensed under GPU GPL v3 or later.
+
+Uses elements of [openseadragon-opacity-slider](https://github.com/WasMachenSachen/openseadragon-opacity-slider) by Tim Loges et al. Licensed under BSD-3-Clause. 
