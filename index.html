@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Virtual Raking Light</title>
+    <style type="text/css">
+      body {
+        background-color: rgb(17, 17, 17);
+        margin: 0;
+      }
+
+      .openseadragon-container :focus { 
+        outline: none; 
+      }
+
+      .openseadragon-canvas:focus {
+        outline: none;
+      }
+
+      .main {
+        display: grid;
+        height: 100%;
+        width: 100%;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+      }
+
+      .loading {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: transparent;
+      }
+
+      .viewer {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      div.loading h1 {
+        font-size: 1rem;
+        color: white;
+        font-family: monospace;
+      }
+
+      div.loading p {
+        color: white;
+        font-family: monospace;
+        font-size: 1rem;
+      }
+
+      div.loading credit {
+        color: white;
+        font-family: monospace;
+        font-size: 0.8rem;
+        margin-bottom: 4rem;
+      }
+
+    </style>
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="loading">
+        <h1>
+          VIRTUAL RAKING LIGHT
+        </h1>
+        <credit>
+          Lars Maxfield · 2024
+        </credit>
+        <p>
+          This may take a minute or two to load.
+        </p>
+        <p>
+          <i>Het laden kan ongeveer 1 of 2 minuten duren.</i>
+        </p>
+      </div>
+      <div id="openseadragon" class="viewer" style="width: 100%; height: 100vh;"></div>
+    </div>
+    <!-- <script src="../openseadragon/openseadragon.min.js"></script> -->  <!-- For local OpenSeadragon source. -->
+    <script src="https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js"></script>
+    <script type="text/javascript">
+
+        const viewer = OpenSeadragon({
+          id: "openseadragon",
+          // prefixUrl: "../openseadragon/images/", // For local OpenSeadragon source.
+          prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/",
+          maxZoomPixelRatio: 4,
+          minZoomImageRatio: 0.5
+        });
+
+        // TODO: Separate urls for type (urls.raking, urls.color)
+        const urls = [
+          "../images/ra.jpg", // Fading center image (here raking-all)
+          "../images/r1.jpg", // Directional raking images
+          "../images/r2.jpg",
+          "../images/r3.jpg",
+          "../images/r4.jpg",
+          "../images/r5.jpg",
+          "../images/r6.jpg",
+          "../images/r7.jpg",
+          "../images/r8.jpg",
+          "../images/b.jpg",  // Optional: Persistent center image (here beauty light)
+        ];
+
+        // Directional raking images
+        // Add raking 1-8 to viewer
+        const n = urls.length
+        for (let i = 1; i < (n-1); i++) {
+          viewer.addSimpleImage({
+            url: urls.at(i),
+            opacity: 0.0,
+          });
+        }; 
+
+        // Center image which fades in/out as mouse nears center
+        // Add raking-all to the viewer, but could instead be beauty/studio light image
+        viewer.addSimpleImage({
+          url: urls.at(0),
+          opacity: 1.0,
+        });
+
+        // Optional: Persistent center image(s)
+        // Add studio light to viewer at 0.1 opacity so the shadows of the raking light appear always lightly illuminated.
+        viewer.addSimpleImage({
+          url: urls.at(-1),
+          opacity: 0.1,
+        });
+        
+    </script>
+    
+    <script type="text/javascript">
+
+        // Add handler to viewer called "pan"
+        viewer.addHandler('pan', function() {
+
+          // Add mouse tracker whereby a move of the mouse causes a function to fire
+            var tracker = new OpenSeadragon.MouseTracker({
+                element: viewer.container,
+                moveHandler: function(event) {
+
+                    // The pan event gives us the mouse position in web coordinates (coordinations in the viewers container)
+                    const webPoint = event.position;
+                          xCursorWeb = webPoint.x;
+                          yCursorWeb = webPoint.y;
+
+                    // Get container size
+                    const viewportSize = viewer.viewport.getContainerSize();
+                          widthViewport = viewportSize.x;
+                          heightViewport = viewportSize.y;
+
+                    // Get container center
+                    const xCenterViewport = Math.round(widthViewport/2);
+                          yCenterViewport = Math.round(heightViewport/2);
+
+                    // Get cursor xy delta relative to center
+                    // Coordination system is oriented with the image coordinate system
+                    // In other words, upside down (flipped vertically)
+                    //      |
+                    //      |
+                    // _____|_____+x
+                    //      |\+theta
+                    //      | \
+                    //      |  \
+                    //     +y   °
+                    const dxCursorCenter = xCursorWeb - xCenterViewport;
+                    const dyCursorCenter = yCursorWeb - yCenterViewport;
+
+                    // Get angle in degrees in the range 0 (inclusive) to 360 (exclusive)
+                    let radians;
+
+                    if (dxCursorCenter || dyCursorCenter) {
+                        radians = Math.atan2(dyCursorCenter, dxCursorCenter);
+                    } else { // If neither has value (are zero), then mouse is at origin
+                        radians = 0; // Give 0
+                    }
+
+                    if (radians < 0) {
+                        radians += 2*Math.PI;
+                    }
+
+                    const degrees = radians * 180 / Math.PI;
+
+                    // Determine which raking light is dominant
+
+                    // Get raking light range within [0, 360)
+                    function getRakingRange(rakingAngle, rakingDeltaDegrees) {
+                      let rakingMin = rakingAngle - rakingDeltaDegrees;
+                      let rakingMax = rakingAngle + rakingDeltaDegrees;
+
+                      if (rakingMin < 0) {
+                        rakingMin += 360;
+                      }
+
+                      if (rakingMax >= 360) {
+                        rakingMax -= 360;
+                      }
+
+                      return {
+                        min: rakingMin,
+                        max: rakingMax
+                      }
+                    }
+
+
+                    const rakingDeltaDegrees = 45.0;
+                          rakingDeltaHalfDegrees = rakingDeltaDegrees/2;
+
+                    // Make array of angles which match the raking order 1-8
+                    const rakingAngles = [
+                      270.0,
+                      315.0,
+                      0.0,
+                      45.0,
+                      90.0,
+                      135.0,
+                      180.0,
+                      225.0
+                    ];
+
+                    // Get the ranges (max and min) of each angle
+                    // const rakingRanges = rakingAngles.map(angle => getRakingRange(angle, rakingDeltaHalfDegrees));
+                    const rakingRanges = rakingAngles.map(angle => getRakingRange(angle, rakingDeltaDegrees));
+
+                    function inRakingRange(rX, degrees) {
+                      let inRange = false;
+                      const max = rX.max;
+                            min = rX.min;
+                      
+                      // If raking range is outside [0, 360), then check if at either end
+                      //
+                      // This happens for r3. 
+                      // r3 is at 0° so its maximum is 0° + (45°/2) and minimum is 0° - (45°/2).
+                      // But since we only work with [0, 360), the minimum is actually 360° - (45°/2).
+                      // So its minimum is larger than its maximum.
+                      // So we check if it's below its maximum OR above its minimum.
+                      //
+                      // In other words, if the minimum is higher than its maximum, then we have to check if its high or low, not in-between.
+                      if (min > max){
+                        if (
+                          (degrees <= rX.max)
+                          || (degrees > rX.min)
+                        ) {
+                          inRange = true;
+                        }
+                      }
+
+                      // Standard case for when min < max, hence we check if it is between min and max.
+                      if (
+                        (degrees <= rX.max)
+                        && (degrees > rX.min)
+                      ) {
+                        inRange = true;
+                      }
+                      return inRange;
+                    };
+
+                    function getLayerOrder(viewer) {
+                      let itemAmount = viewer.world.getItemCount();
+                      let tempLayerInformation = [];
+                      for (let i = 0; i < itemAmount; i++) {
+                        /*
+                        * An Openseadragon tile stores only the tilesUrl, not the .dzi Url.
+                        * Therefore we have to map these to compare and reorder our layerInformation Array.
+                        * Every tileUrl ends with _files -> cut and replace it with .dzi and we have the providet source
+                        * If no tileUrl is given we have a simple image or a IIIF image, therefor we only use .url or .id
+                        */
+                        let currentOsdItem = viewer.world.getItemAt(i);
+                        // let itemUrl = currentOsdItem.source.tilesUrl
+                        //   ? `${currentOsdItem.source.tilesUrl.slice(0, -7)}.dzi`
+                        //   : currentOsdItem.source.url;
+                        let itemUrl = 
+                          currentOsdItem.source.tilesUrl ? `${currentOsdItem.source.tilesUrl.slice(0, -7)}.dzi` :
+                          currentOsdItem.source.url      ? currentOsdItem.source.url                            :
+                                                           currentOsdItem.source.id;
+                        tempLayerInformation[i] = itemUrl;
+                      }
+                      return tempLayerInformation;
+                    }
+                    function findIndexBySource(source, viewer) {
+                      let itemAmount = viewer.world.getItemCount();
+                      for (let i = 0; i < itemAmount; i++) {
+                        let currentOsdItem = viewer.world.getItemAt(i);
+                        let itemUrl = 
+                          currentOsdItem.source.tilesUrl ? `${currentOsdItem.source.tilesUrl.slice(0, -7)}.dzi` :
+                          currentOsdItem.source.url      ? currentOsdItem.source.url                            :
+                                                           currentOsdItem.source.id;
+                        if (source.replace('/info.json','') === itemUrl) return i; // Remove /info.json from source URL because if that is an IIIF url, we want just the (shorter) image URL
+                      }
+                      return -1;
+                    };
+                    // console.log(findIndexBySource(r2Url, viewer))
+                    // A function which puts the dominant url on top, and the accompanying url on the next spot.
+                    // Using findIndexBySource to get index from its url, then using that index to get the item, and then move that item in the world
+
+                    // Simple setOpacity as either in range or not.
+                    // const visibleOpacity = 1
+                    // Set the one in range to fill opacity
+                    // Set the others to 0
+                    // for (let i = 0; i <= 7; i++) {
+                    //   const ii = findIndexBySource(urls.at(i+1), viewer);
+                    //   if (inRakingRange(rakingRanges.at(i), degrees)) {
+                    //     viewer.world.getItemAt(ii).setOpacity(visibleOpacity);
+                    //   } else {
+                    //     viewer.world.getItemAt(ii).setOpacity(0.0);
+                    //   };
+                    // };
+
+                    // Complex setOpacity
+                    // Two of the raking angles will be in range. In other words, the mouse degrees
+                    // will be between two existing values.
+                    // Sets to 0 if not in range
+                    // If in range then see which of the two is closest
+                    // Or rather, determine if the degrees is closer to it or the other, then set accordingly.
+                    // That is degrees-rakingAngle(i) <= rakingDelta/2 (equal to or less than half the delta  )
+                    // This needs to account for a delta that goes over the 360/boundary. Example: 350° is 10° from 0° (r3) and 35° from 315° (r2).
+
+                    // Complex setOpacity checks
+                    // We learned that 0.5r1+1.0r2 = 0.5r2+1.0r1, meaning we need to switch order to have smooth transitions.
+                    // This can be thought of a dominant raking light and an accompanying raking light
+                    // The dominant raking light is the one the cursor angle is closest to.
+                    // The accompanying raking light the next closest.
+                    // For 280°, this means r1 is closest (280°-270°=10° away), with r2 the next closest (280°-315°=-35° away).
+                    // This could be done with a sort of range check for "within dominant range" and "within accompanying".
+                    // The return is the index of the dominant and accompanying lights.
+                    // This would use the array of raking angles. Find the index of the closest one; index of the next closest.
+
+                    const inRangeRakingAngles = [];
+                    const inRangeUrls = [];
+                    const inRangeIndexes = [];
+
+                    for (let i = 0; i <= 7; i++) {
+                      const ii = findIndexBySource(urls.at(i+1), viewer);
+                      if (inRakingRange(rakingRanges.at(i), degrees)) {
+                        inRangeRakingAngles.push(rakingAngles.at(i));
+                        inRangeUrls.push(urls.at(i+1));
+                        inRangeIndexes.push(ii);
+                      } else {
+                        viewer.world.getItemAt(ii).setOpacity(0.0);
+                      };
+                    }
+
+                    function getRakingDelta(angle, degrees) {
+                      let delta = Math.abs(degrees - angle);
+                      if (delta > 180) {
+                        delta -= 360 * Math.ceil( delta / 360 );
+                        delta = Math.abs(delta);
+                      };
+                      return delta;
+                    }
+
+                    const inRangeRakingDeltas = inRangeRakingAngles.map(angle => getRakingDelta(angle, degrees));
+
+                    // Assume closer is the first value; if not, swap
+                    let closerDelta = inRangeRakingDeltas.at(0)
+                    let fartherDelta = inRangeRakingDeltas.at(1)
+                    const sumDelta = closerDelta + fartherDelta;
+                    let closerUrl = inRangeUrls.at(0)
+                    let fartherUrl = inRangeUrls.at(1)
+                    let closerIndex = inRangeIndexes.at(0)
+                    let fartherIndex = inRangeIndexes.at(1)
+
+                    if (closerDelta > fartherDelta) {
+                      [closerDelta, fartherDelta] = [fartherDelta, closerDelta];
+                      [closerUrl, fartherUrl] = [fartherUrl, closerUrl];
+                      [closerIndex, fartherIndex] = [fartherIndex, closerIndex];
+                    };
+
+                    const fartherOpacity = (sumDelta - fartherDelta) / sumDelta;
+
+                    viewer.world.getItemAt(closerIndex).setOpacity(1.0);
+                    viewer.world.getItemAt(fartherIndex).setOpacity(fartherOpacity);
+                    viewer.world.setItemIndex(viewer.world.getItemAt(fartherIndex), 7);
+
+                    // Fill in with visible light 
+                    const radius = Math.hypot(dyCursorCenter, dxCursorCenter)
+
+                    // SIMPLE
+                    // Radius coming from a circle contained within the viewport
+                    let Radius = Math.min(widthViewport, heightViewport);
+                    Radius = 1.0*Radius/2;
+
+                    // // COMPLEX
+                    // // Radius coming from an ellipse contained within the viewport, taken at the same angle as the cursor to the center
+                    // // https://math.stackexchange.com/questions/432902/how-to-get-the-radius-of-an-ellipse-at-a-specific-angle-by-knowing-its-semi-majo
+                    // const a = widthViewport/2;
+                    //       b = heightViewport/2;
+                    //       a2 = Math.pow(a, 2);
+                    //       b2 = Math.pow(b, 2);
+                    //
+                    // const theta = degrees*Math.PI/180.0;
+                    //       sinSquaredTheta = Math.pow(Math.sin(theta), 2);
+                    //       cosSquaredTheta = Math.pow(Math.cos(theta), 2);
+                    //
+                    // Radius = (a*b) / Math.sqrt( a2 * sinSquaredTheta + b2 * cosSquaredTheta)
+
+                    // Calculate ratio of radius to Radius
+                    let rR = radius/Radius;
+                    rR = Math.max(Math.min(1.0, rR), 0.0)
+
+                    // TODO
+                    // Add inner circle/ellipse so there is center deadzone and outer deadzone (donut hitbox)
+
+                    const i = findIndexBySource(urls.at(0), viewer);
+                    viewer.world.getItemAt(i).setOpacity(1 - rR);
+                }
+            });
+
+        });
+
+      </script>
+    
+</body>
+</html>
