@@ -15,6 +15,7 @@ Edit `urls` in `index.html` to point to your own images*.
 Run a local server** and open index.html in a browser.
 
 <sup>*The code is currently set to use simple images (JPG's), but it also supports tile sources such as DZI and IIIF.</sup>
+
 <sup>**[Live Server for VSCode](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) is a useful option.</sup>
 
 ## To-do's
