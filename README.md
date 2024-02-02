@@ -4,9 +4,22 @@
 
 Simulate a moving raking light in your browser using OpenSeadragon.
 
-Move your mouse to move the light across a painting or any other object photographed with raking light. Requires 8 directional raking images and 1 raking-all image and/or 1 regular image. 
+Move your mouse to move the light across a painting or any other object photographed with raking light. 
 
-Supports simple images and tile sources such as DZI and IIIF. Implemented in pure HTML/CSS/JS.
+Supports both simple images and tile sources such as DZI and IIIF. Implemented in pure HTML/CSS/JS.
+
+## Image arrangement
+
+![Default arrangement of images for reference.](reference.png)
+
+By default you'll need:
+- 1 raking-all image (*ra*) for the center; 
+- 8 uniformly spaced raking images (*r1–8*); and 
+- 1 regular image (such as a beauty light photograph *b*) which is used to persistently fill in the shadows.
+
+If you have more or fewer than 8 directions, simply modify `rakingAngles` and `rakingDeltaDegrees` accordingly. For sets with non-uniform spacing such as {0°, 10°, 40°, 70°, ..}, you'll need to modify the code. Feel free to make a pull request if you do :-)
+
+For the center image you can use a regular image instead of a raking-all image to achieve a lights-on, lights-off effect when you move the mouse to the center. If you do so, make sure to omit the shadow in-fill image (the last image in `urls`).
 
 ## Local setup
 
