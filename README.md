@@ -41,6 +41,6 @@ See TODO flags in index.html.
 
 Created by Lars Maxfield.
 
-Licensed under GPU GPL v3 or later.
+Licensed under [GNU GPL v3 or later](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
 Uses elements of [openseadragon-opacity-slider](https://github.com/WasMachenSachen/openseadragon-opacity-slider) by Tim Loges et al. Licensed under BSD-3-Clause. 
